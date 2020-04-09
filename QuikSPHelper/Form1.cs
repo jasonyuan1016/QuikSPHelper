@@ -211,7 +211,11 @@ namespace QuikSPHelper
                     }
                     break;
             }
-            str += "    " + "-" + item._description;
+            
+            if (item._description != string.Empty)
+            {
+                str += "    " + "--" + item._description;
+            }
             return str;
         }
 
