@@ -92,19 +92,19 @@ namespace QuikSPHelper
             AppendText("-- Description:" + txtDescription.Text);
             if (!string.IsNullOrEmpty(txtIDAL.Text))
             {
-                AppendText("-- IDAL " + txtIDAL.Text);
+                AppendText("-- IDAL         " + txtIDAL.Text);
             }
             if (!string.IsNullOrEmpty(txtDAL.Text))
             {
-                AppendText("-- DAL " + txtDAL.Text);
+                AppendText("-- DAL          " + txtDAL.Text);
             }
             if (!string.IsNullOrEmpty(txtMethod.Text))
             {
-                AppendText("-- Method " + txtMethod.Text);
+                AppendText("-- Method       " + txtMethod.Text);
             }
             if (!string.IsNullOrEmpty(txtReturn.Text))
             {
-                AppendText("-- Return " + txtReturn.Text);
+                AppendText("-- Return       " + txtReturn.Text);
             }
             AppendText("/*");
             AppendText("EXEC " + spName);
