@@ -47,6 +47,7 @@
             this.txtContent = new System.Windows.Forms.TextBox();
             this.btnOK = new System.Windows.Forms.Button();
             this.btnCopy = new System.Windows.Forms.Button();
+            this.button1 = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // sltTable
@@ -157,11 +158,11 @@
             // label666
             // 
             this.label666.AutoSize = true;
-            this.label666.Location = new System.Drawing.Point(12, 110);
+            this.label666.Location = new System.Drawing.Point(-4, 110);
             this.label666.Name = "label666";
-            this.label666.Size = new System.Drawing.Size(39, 15);
+            this.label666.Size = new System.Drawing.Size(55, 15);
             this.label666.TabIndex = 14;
-            this.label666.Text = "Name";
+            this.label666.Text = "SPName";
             // 
             // txtName
             // 
@@ -203,7 +204,7 @@
             // 
             // btnCopy
             // 
-            this.btnCopy.Location = new System.Drawing.Point(499, 128);
+            this.btnCopy.Location = new System.Drawing.Point(643, 128);
             this.btnCopy.Name = "btnCopy";
             this.btnCopy.Size = new System.Drawing.Size(75, 23);
             this.btnCopy.TabIndex = 19;
@@ -211,11 +212,22 @@
             this.btnCopy.UseVisualStyleBackColor = true;
             this.btnCopy.Click += new System.EventHandler(this.btnCopy_Click);
             // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(462, 128);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(75, 23);
+            this.button1.TabIndex = 20;
+            this.button1.Text = "model-F";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 719);
+            this.Controls.Add(this.button1);
             this.Controls.Add(this.btnCopy);
             this.Controls.Add(this.btnOK);
             this.Controls.Add(this.txtContent);
@@ -236,7 +248,7 @@
             this.Controls.Add(this.txtAuthor);
             this.Controls.Add(this.sltTable);
             this.Name = "Form1";
-            this.Text = "快速生成SP";
+            this.Text = "GT-小帮手";
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -263,6 +275,7 @@
         private System.Windows.Forms.TextBox txtContent;
         private System.Windows.Forms.Button btnOK;
         private System.Windows.Forms.Button btnCopy;
+        private System.Windows.Forms.Button button1;
     }
 }
 

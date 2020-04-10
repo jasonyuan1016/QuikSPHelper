@@ -58,34 +58,7 @@ namespace QuikSPHelper
             txtContent.Text = string.Empty;
             string tName = sltTable.SelectedItem.ToString();
             string spName = txtName.Text;
-            string sql = "SELECT * FROM V_GetTabDefine WHERE tName='" + tName + "'";
-            List<ColumnItem> columns = new List<ColumnItem>();
-            using (SqlConnection conn = new SqlConnection(connStr))
-            {
-                //建立连接
-                conn.Open();
-
-                //创建SQL命令
-                SqlCommand queryCmd = new SqlCommand(sql, conn);
-
-
-                //执行SQL命令
-                SqlDataReader reader = queryCmd.ExecuteReader();
-                //处理SQL命令结果
-                while (reader.Read())
-                {
-                    columns.Add(new ColumnItem()
-                    {
-                        _name = reader["_name"].ToString(),
-                        _description = reader["_description"].ToString(),
-                        _pk = reader["_pk"].ToString().Equals("PK"),
-                        _type = reader["_type"].ToString(),
-                        _length = Convert.ToInt32(reader["_length"]),
-                        _places = Convert.ToInt32(reader["_places"])
-                    });
-                }
-            }
-
+            var columns = GetColumnItems();
             AppendText("-- =============================================");
             AppendText("-- Author:" + txtAuthor.Text);
             AppendText("-- Create date: " + DateTime.Now.ToString("yyyy.MM.dd"));
@@ -189,6 +162,38 @@ namespace QuikSPHelper
             AppendText("END");
         }
 
+        private List<ColumnItem> GetColumnItems()
+        {
+            string sql = "SELECT * FROM V_GetTabDefine WHERE tName='" + sltTable.SelectedItem.ToString() + "'";
+            List<ColumnItem> columns = new List<ColumnItem>();
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                //建立连接
+                conn.Open();
+
+                //创建SQL命令
+                SqlCommand queryCmd = new SqlCommand(sql, conn);
+
+
+                //执行SQL命令
+                SqlDataReader reader = queryCmd.ExecuteReader();
+                //处理SQL命令结果
+                while (reader.Read())
+                {
+                    columns.Add(new ColumnItem()
+                    {
+                        _name = reader["_name"].ToString(),
+                        _description = reader["_description"].ToString(),
+                        _pk = reader["_pk"].ToString().Equals("PK"),
+                        _type = reader["_type"].ToString(),
+                        _length = Convert.ToInt32(reader["_length"]),
+                        _places = Convert.ToInt32(reader["_places"])
+                    });
+                }
+            }
+            return columns;
+        }
+
         private string ConvertParas(ColumnItem item)
         {
             string str = c1(item._name) + " as " + item._type;
@@ -262,7 +267,187 @@ namespace QuikSPHelper
                 MessageBox.Show("已将内容复制到剪贴板");
             }
         }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            string funName = txtMethod.Text;
+            List<ColumnItem> columns = null;
+            try
+            {
+                columns = GetColumnItemsFromSP();
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("读取SP异常");
+            }
+            txtContent.Text = string.Empty;
+            AppendText("/// <summary>", 2);
+            AppendText("/// " + txtDescription.Text, 2);
+            AppendText("/// </summary>", 2);
+            AppendText("/// <returns></returns>",2);
+            AppendText("private string " + funName.ToLower() + "()", 2);
+            AppendText("{",2);
+            AppendText("ResultBase resultObj = new ResultBase();", 3);
+            AppendText("");
+            AppendText("try",3);
+            AppendText("{", 3);
+            AppendText("Dictionary<string, ParaItem> paras = new Dictionary<string, ParaItem>();", 4);
+            foreach (var item in columns)
+            {
+                WriteParaItem(item);
+            }
+          
+            AppendText("");
+            AppendText("#region 验证数据格式是否有效", 4);
+
+            AppendText("Task<string>[] tooltips = new Task<string>[]{", 4);
+            AppendText("Task.Factory.StartNew(()=>WebUtility.ValidationData(paras[\"" + c(columns[0]._name) + "\"].Value.ToString(), " + ConvertValidateType(columns[0]._type) + ", " + columns[0]._length + ", \"" + c(columns[0]._name) + "\", false)),", 5);
+            for (int i = 1; i < columns.Count; i++)
+            {
+                WriteValidationData(columns[i]);
+            }
+            AppendText("};", 4);
+
+            AppendText("string tips = WebUtility.ComValidation(tooltips);", 4);
+            AppendText("if (tips.Length > 0)", 4);
+            AppendText("{", 4);
+            AppendText("//验证不正确返回异常的Json", 5);
+            AppendText("resultObj.errorInfo = WebUtility.SetTipsInfo(tips);", 5);
+            AppendText("resultObj.result = false;", 5);
+            AppendText("return resultObj.ToString();", 5);
+            AppendText("}", 4);
+
+            AppendText("#endregion", 4);
+            AppendText("");
+
+            if (txtReturn.Text.Equals("int", StringComparison.CurrentCultureIgnoreCase))
+            {
+                AppendText("resultObj.data = DALUtility." + txtDAL.Text + "." + funName + "(paras);", 4);
+            }
+            else
+            {
+                AppendText("DataSet ds = DALUtility." + txtDAL.Text + "." + funName + "(paras);", 4);
+                AppendText("resultObj.data = new ResultData()", 4);
+                AppendText("{", 4);
+                AppendText("rows = ds", 5);
+                AppendText("};", 4);
+            }
+            AppendText("}", 3);
+            AppendText("catch (Exception ex)", 3);
+            AppendText("{", 3);
+            AppendText("resultObj.result = false;", 4);
+            AppendText("resultObj.errorInfo = WebUtility.SetErrorInfo(ex.ToString());", 4);
+            AppendText("DALUtility.Log.SaveExceptionLog(resultObj.errorInfo.errorCode, ex.ToString());", 4);
+            AppendText("}", 3);
+            AppendText("");
+            AppendText("return resultObj.ToString();", 4);
+            AppendText("}", 2);
+        }
+
+        void WriteParaItem(ColumnItem item)
+        {
+            string pName = c(item._name);
+            if (pName.Equals("_creator") || pName.Equals("_editor"))
+            {
+                AppendText("paras[\"" + pName + "\"] = SetProperty(UserName, SqlDbType.VarChar, 30, 2);", 4);
+            }
+            else
+            {
+                string[] needLengthTypes = { "decimal", "nvarchar", "varchar" };
+
+                string str = "paras[\"" + pName+ "\"] = SetProperty(\"" + pName+ "\", " + ConvertSqlDbType(item._type);
+                if (needLengthTypes.Contains(item._type))
+                {
+                    str += "," + item._length;
+                }
+                if (item._output)
+                {
+                    str += ", ParameterDirection.Output";
+                }
+                str += ");";
+                AppendText(str, 4);
+            }
+        }
+
+        void WriteValidationData(ColumnItem item)
+        {
+            string str = "Task.Factory.StartNew(()=>WebUtility.ValidationData(paras[\"" + c(item._name) + "\"].Value.ToString(), " + ConvertValidateType(item._type) + ", " + item._length + ", \"" + c(item._name) + "\", false)),";
+            AppendText(str, 5);
+        }
+
+        string ConvertSqlDbType(string _type)
+        {
+            switch (_type)
+            {
+                case "bigint": return "SqlDbType.BigInt";
+                case "bit": return "SqlDbType.Bit";
+                case "char": return "SqlDbType.Char";
+                case "datetime": return "SqlDbType.DateTime";
+                case "decimal": return "SqlDbType.Decimal";
+                case "int": return "SqlDbType.Int";
+                case "nvarchar": return "SqlDbType.NVarChar";
+                case "smallint": return "SqlDbType.SmallInt";
+                case "tinyint": return "SqlDbType.TinyInt";
+                case "varbinary": return "SqlDbType.VarBinary";
+                case "varchar": return "SqlDbType.VarChar";
+                default:
+                    return "SqlDbType." + _type;
+            }
+        }
+
+        string ConvertValidateType(string _type)
+        {
+            switch (_type)
+            {
+                case "bigint": return "ValidateType.Integer";
+                case "bit": return "ValidateType.Boolean";
+                case "datetime": return "ValidateType.DateTime";
+                case "decimal": return "ValidateType.Number";
+                case "int": return "ValidateType.Integer";
+                case "smallint": return "ValidateType.Integer";
+                case "tinyint": return "ValidateType.Integer";
+                default:
+                    return "ValidateType.None";
+            }
+        }
+
+        public List<ColumnItem> GetColumnItemsFromSP()
+        {
+            List<ColumnItem> columns = new List<ColumnItem>();
+
+            string sql = string.Format("select P.name,parameter_id,P.max_length,is_output,S.name tname from (select name,parameter_id,max_length,is_output,system_type_id from sys.all_parameters where object_id=OBJECT_ID('{0}')) P	left join sys.types S on P.system_type_id = S.system_type_id", txtName.Text);
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                //建立连接
+                conn.Open();
+
+                //创建SQL命令
+                SqlCommand queryCmd = new SqlCommand(sql, conn);
+
+
+                //执行SQL命令
+                SqlDataReader reader = queryCmd.ExecuteReader();
+                //处理SQL命令结果
+                while (reader.Read())
+                {
+                    columns.Add(new ColumnItem()
+                    {
+                        _name = reader["name"].ToString().Replace("@", ""),
+                        _type = reader["tname"].ToString(),
+                        _length = Convert.ToInt32(reader["max_length"]),
+                        _output = Convert.ToBoolean(reader["is_output"])
+                    });
+                }
+            }
+
+            return columns;
+
+        }
     }
+
+    
+    
 
 
 
@@ -295,5 +480,9 @@ namespace QuikSPHelper
         /// 小数位
         /// </summary>
         public int _places { get; set; }
+        /// <summary>
+        /// 是否输出[SP参数专用]
+        /// </summary>
+        public bool _output { get; set; }
     }
 }
